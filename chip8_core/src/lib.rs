@@ -5,7 +5,7 @@ const RAM_SIZE: usize = 4096;
 const NUM_REGS: usize = 16;
 const STACK_SIZE: usize = 16;
 const NUM_KEYS: usize = 16;
-const START_ADDR: u16 = 0x200;
+const START_ADDR: u16 = 0x200; // Game code on Chip-8 always starts on this memory address.
 
 pub struct Emu {
     pc: u16,
@@ -34,5 +34,17 @@ impl Emu {
             dt: 0,
             st: 0,
         }
+    }
+
+    // Push a u16 value to the stack and advance the stack pointer by 1.
+    fn push(&mut self, val: u16) {
+        self.stack[self.sp as usize] = val;
+        self.sp += 1;
+    }
+
+    // Pop a u16 value from the stack and return the stack pointer to the previous value.
+    fn pop(&mut self) -> u16 {
+        self.sp -= 1;
+        self.stack[self.sp as usize]
     }
 }
