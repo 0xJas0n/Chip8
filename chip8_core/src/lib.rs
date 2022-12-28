@@ -5,8 +5,8 @@ const RAM_SIZE: usize = 4096;
 const NUM_REGS: usize = 16;
 const STACK_SIZE: usize = 16;
 const NUM_KEYS: usize = 16;
-const START_ADDR: u16 = 0x200;
 // Game code on Chip-8 always starts on this memory address.
+const START_ADDR: u16 = 0x200;
 const FONTSET_SIZE: usize = 80;
 const FONTSET: [u8; FONTSET_SIZE] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
