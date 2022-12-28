@@ -76,6 +76,24 @@ impl Emu {
         self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
 
+    // 1. Fetch the value from our game (loaded into RAM) at the memory address stored in our PC.
+    // 2. Decode this instruction.
+    // 3. Execute, which will possibly involve modifying our CPU registers or RAM.
+    // 4. Move the PC to the next instruction and repeat.
+    pub fn tick(&mut self) {
+        let op = self.fetch();
+    }
+
+    // Fetch opcode from current PC.
+    // Ram items are declared as u8 but opcodes or u16 so we fetch 2 items and combine them.
+    fn fetch(&mut self) -> u16 {
+        let higher_byte = self.ram[self.pc as usize] as u16;
+        let lower_byte = self.ram[(self.pc + 1) as usize] as u16;
+        let op = (higher_byte << 8) | lower_byte;
+        self.pc += 2;
+        op
+    }
+
     // Push a u16 value to the stack and advance the stack pointer by 1.
     fn push(&mut self, val: u16) {
         self.stack[self.sp as usize] = val;
