@@ -82,6 +82,7 @@ impl Emu {
     // 4. Move the PC to the next instruction and repeat.
     pub fn tick(&mut self) {
         let op = self.fetch();
+        self.execute(op);
     }
 
     // Fetch opcode from current PC.
@@ -104,5 +105,58 @@ impl Emu {
     fn pop(&mut self) -> u16 {
         self.sp -= 1;
         self.stack[self.sp as usize]
+    }
+
+    pub fn tick_timers(&mut self) {
+        if self.dt > 0 {
+            self.dt -= 1;
+        }
+
+        if self.st > 0 {
+            if self.st == 1 {
+                // TODO: Implement audio with https://docs.rs/beep/latest/beep/fn.beep.html.
+            }
+
+            self.st -= 1;
+        }
+    }
+
+    // Match the given opcode and execute it.
+    fn execute(&mut self, op: u16) {
+        // Removed 12 bitshift because it should only have empty bits on the right after the AND.
+        let digit1 = op & 0xF000;
+        let digit2 = (op & 0x0F00) >> 8;
+        let digit3 = (op & 0x00F0) >> 4;
+        let digit4 = op & 0x000F;
+
+        match (digit1, digit2, digit3, digit4) {
+            // NOP - No operation.
+            (0, 0, 0, 0) => return,
+
+            // CLS - Clear screen.
+            (0, 0, 0xE, 0) => self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT],
+
+            // RET - Return from subroutine.
+            (0, 0, 0xE, 0xE) => {
+                let ret_addr = self.pop();
+                self.pc = ret_addr;
+            }
+
+            // JMP NNN - Move PC to given address.
+            (1, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.pc = nnn;
+            }
+
+            // CALL NNN - Save current PC to the stack and move PC to the given address.
+            (2, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.push(self.pc);
+                self.pc = nnn;
+            }
+
+            // Fallback value required by Rust, this should never execute.
+            (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
+        }
     }
 }
