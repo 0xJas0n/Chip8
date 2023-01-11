@@ -130,27 +130,27 @@ impl Emu {
         let digit4 = op & 0x000F;
 
         match (digit1, digit2, digit3, digit4) {
-            // NOP - No operation.
+            // 0000 - No operation.
             (0, 0, 0, 0) => return,
 
-            // CLS - Clear screen.
+            // 00E0 - Clear screen.
             (0, 0, 0xE, 0) => self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT],
 
-            // RET - Return from subroutine.
+            // 00EE - Return from subroutine.
             (0, 0, 0xE, 0xE) => {
                 let ret_addr = self.pop();
 
                 self.pc = ret_addr;
             }
 
-            // JMP NNN - Move PC to given address.
+            // 1NNN - Move PC to given address.
             (1, _, _, _) => {
                 let nnn = op & 0xFFF;
 
                 self.pc = nnn;
             }
 
-            // CALL NNN - Save current PC to the stack and move PC to the given address.
+            // 2NNN - Save current PC to the stack and move PC to the given address.
             (2, _, _, _) => {
                 let nnn = op & 0xFFF;
 
