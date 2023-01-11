@@ -139,18 +139,21 @@ impl Emu {
             // RET - Return from subroutine.
             (0, 0, 0xE, 0xE) => {
                 let ret_addr = self.pop();
+
                 self.pc = ret_addr;
             }
 
             // JMP NNN - Move PC to given address.
             (1, _, _, _) => {
                 let nnn = op & 0xFFF;
+
                 self.pc = nnn;
             }
 
             // CALL NNN - Save current PC to the stack and move PC to the given address.
             (2, _, _, _) => {
                 let nnn = op & 0xFFF;
+
                 self.push(self.pc);
                 self.pc = nnn;
             }
@@ -189,6 +192,7 @@ impl Emu {
             (6, _, _, _) => {
                 let x = digit2 as usize;
                 let nn = (op & 0xFF) as u8;
+
                 self.v_reg[x] = nn;
             }
 
@@ -196,6 +200,7 @@ impl Emu {
             (7, _, _, _) => {
                 let x = digit2 as usize;
                 let nn = (op & 0xFF) as u8;
+
                 self.v_reg[x] = self.v_reg[x].wrapping_add(nn);
             }
 
@@ -203,7 +208,85 @@ impl Emu {
             (8, _, _, 0) => {
                 let x = digit2 as usize;
                 let y = digit3 as usize;
+
                 self.v_reg[x] = self.v_reg[y];
+            }
+
+            // 8XY1 - Bitwise OR of VX and VY.
+            (8, _, _, 1) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+
+                self.v_reg[x] |= self.v_reg[y];
+            }
+
+            // 8XY2 - Bitwise AND of VX and VY.
+            (8, _, _, 2) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+
+                self.v_reg[x] &= self.v_reg[y];
+            }
+
+            // 8XY3 - Bitwise XOR of VX and VY.
+            (8, _, _, 3) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+
+                self.v_reg[x] ^= self.v_reg[y];
+            }
+
+            // 8XY4 - Add VX + VY and set carry flag in case of integer overflow.
+            (8, _, _, 4) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                let (result, carry) = self.v_reg[x].overflowing_add(self.v_reg[y]);
+
+                self.v_reg[x] = result;
+                self.v_reg[0xF] = if carry { 1 } else { 0 };
+            }
+
+            // 8XY5 - Subtract VX - VY and set borrow flag in case of integer underflow.
+            (8, _, _, 5) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                let (result, borrow) = self.v_reg[x].overflowing_sub(self.v_reg[y]);
+
+                self.v_reg[x] = result;
+                self.v_reg[0xF] = if borrow { 0 } else { 1 };
+            }
+
+            // 8XY6 - Bitwise single right shift and store dropped bit in the flag register.
+            (8, _, _, 6) => {
+                let x = digit2 as usize;
+                let dropped_bit = self.v_reg[x] & 1;
+
+                self.v_reg[x] >>= 1;
+                self.v_reg[0xF] = dropped_bit;
+            }
+
+            // 9XY0 - Skip next if VX != VY.
+            (9, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+
+                if self.v_reg[x] != self.v_reg[y] {
+                    self.pc += 2;
+                }
+            }
+
+            // ANNN - Set the I register to NNN.
+            (0xA, _, _, _) => {
+                let nnn = op & 0xFFF;
+
+                self.i_reg = nnn;
+            }
+
+            // BNNN - Jump to V0 + NNN.
+            (0xB, _, _, _) => {
+                let nnn = op & 0xFFF;
+
+                self.pc = (self.v_reg[0] as u16) + nnn;
             }
 
             // Fallback value required by Rust, this should never execute.
