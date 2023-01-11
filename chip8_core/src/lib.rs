@@ -155,6 +155,57 @@ impl Emu {
                 self.pc = nnn;
             }
 
+            // 3XNN - Skip next if VX == NN.
+            (3, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+
+                if self.v_reg[x] == nn {
+                    self.pc += 2;
+                }
+            }
+
+            // 4XNN - Skip next if VX != NN.
+            (4, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+
+                if self.v_reg[x] != nn {
+                    self.pc += 2;
+                }
+            }
+
+            // 5XY0 - Skip next if VX == VY.
+            (5, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+
+                if self.v_reg[x] == self.v_reg[y] {
+                    self.pc += 2;
+                }
+            }
+
+            // 6XNN - Set VX value to NN.
+            (6, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                self.v_reg[x] = nn;
+            }
+
+            // 7XNN - Add given value to VX.
+            (7, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                self.v_reg[x] = self.v_reg[x].wrapping_add(nn);
+            }
+
+            // 8XY0 - Set VX value to VY value.
+            (8, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                self.v_reg[x] = self.v_reg[y];
+            }
+
             // Fallback value required by Rust, this should never execute.
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
