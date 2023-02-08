@@ -44,7 +44,7 @@ pub struct Emu {
 
 impl Emu {
     pub fn new() -> Self {
-        let mut new_emu = Self {
+        let mut emu = Self {
             pc: START_ADDR,
             ram: [0; RAM_SIZE],
             screen: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -58,9 +58,9 @@ impl Emu {
         };
 
         // Copy the fontset into ram.
-        new_emu.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+        emu.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
 
-        new_emu
+        emu
     }
 
     // Reset the emulator to the default settings.
@@ -333,6 +333,74 @@ impl Emu {
                     self.v_reg[0xF] = 0;
                 }
             }
+
+            // EX9E - Skip if key pressed.
+            (0xE, _, 9, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+
+                if key {
+                    self.pc += 2;
+                }
+            }
+
+            // EXA1 - Skip if key not pressed.
+            (0xE, _, 0xA, 1) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+
+                if !key {
+                    self.pc += 2;
+                }
+            }
+
+            // FX07 - Set VX to current delay timer value.
+            (0xF, _, 0, 7) => {
+                let x = digit2 as usize;
+                self.v_reg[x] = self.dt;
+            }
+
+            // FX0A - Wait for key press.
+            (0xF, _, 0, 0xA) => {
+                let x = digit2 as usize;
+                let mut pressed = false;
+
+                for i in 0..self.keys.len() {
+                    if self.keys[i] {
+                        self.v_reg[x] = i as u8;
+                        pressed = true;
+
+                        break;
+                    }
+                }
+
+                if !pressed {
+                    self.pc -= 2;
+                }
+            }
+
+            // FX15 - Set delay timer to value stored in VX
+            (0xF, _, 1, 5) => {
+                let x = digit2 as usize;
+                self.dt = self.v_reg[x];
+            },
+
+            // FX18 - Set sound timer to value stored in VX
+            (0xF, _, 1, 8) => {
+                let x = digit2 as usize;
+                self.st = self.v_reg[x];
+            },
+
+            // FX1E - Increment I by VX value.
+            (0xF, _, 1, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as u16;
+                self.i_reg = self.i_reg.wrapping_add(vx);
+            },
+
+            // FX29 - Set I to Font Address.
 
             // Fallback value required by Rust, this should never execute.
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
