@@ -57,7 +57,7 @@ impl Emu {
             st: 0,
         };
 
-        // Copy the fontset into ram.
+        // Copy the fontset into RAM.
         emu.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
 
         emu
