@@ -78,6 +78,23 @@ impl Emu {
         self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
 
+    // Return pointer to the screen array.
+    pub fn get_display(&self) -> &[bool] {
+        &self.screen
+    }
+
+    // Keypress handling.
+    pub fn keypress(&mut self, idx: usize, pressed: bool) {
+        self.keys[idx] = pressed;
+    }
+
+    // Load game code from a file into RAM.
+    pub fn load(&mut self, data: &[u8]) {
+        let start = START_ADDR as usize;
+        let end = (START_ADDR as usize) + data.len();
+        self.ram[start..end].copy_from_slice(data);
+    }
+
     // 1. Fetch the value from our game (loaded into RAM) at the memory address stored in our PC.
     // 2. Decode this instruction.
     // 3. Execute, which will possibly involve modifying our CPU registers or RAM.
@@ -385,22 +402,60 @@ impl Emu {
             (0xF, _, 1, 5) => {
                 let x = digit2 as usize;
                 self.dt = self.v_reg[x];
-            },
+            }
 
             // FX18 - Set sound timer to value stored in VX
             (0xF, _, 1, 8) => {
                 let x = digit2 as usize;
                 self.st = self.v_reg[x];
-            },
+            }
 
             // FX1E - Increment I by VX value.
             (0xF, _, 1, 0xE) => {
                 let x = digit2 as usize;
                 let vx = self.v_reg[x] as u16;
                 self.i_reg = self.i_reg.wrapping_add(vx);
-            },
+            }
 
             // FX29 - Set I to Font Address.
+            (0xF, _, 2, 9) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as u16;
+                self.i_reg = vx * 5;
+            }
+
+            // FX33 - Binary-coded decimal.
+            (0xF, _, 3, 3) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as f32;
+                // Fetch the hundreds digit by dividing by 100 and tossing the decimal
+                let hundreds = (vx / 100.0).floor() as u8;
+                // Fetch the tens digit by dividing by 10, tossing the ones digit and the decimal
+                let tens = ((vx / 10.0) % 10.0).floor() as u8;
+                // Fetch the ones digit by tossing the hundreds and the tens
+                let ones = (vx % 10.0) as u8;
+                self.ram[self.i_reg as usize] = hundreds;
+                self.ram[(self.i_reg + 1) as usize] = tens;
+                self.ram[(self.i_reg + 2) as usize] = ones;
+            }
+
+            // FX55 - Store V0 - VX values into RAM.
+            (0xF, _, 5, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.ram[i + idx] = self.v_reg[idx];
+                }
+            },
+
+            // FX55 - Load V0 - VX values from RAM.
+            (0xF, _, 6, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.v_reg[idx] = self.ram[i + idx];
+                }
+            },
 
             // Fallback value required by Rust, this should never execute.
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
