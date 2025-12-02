@@ -338,7 +338,7 @@ impl Emu {
                             let idx = x + SCREEN_WIDTH * y;
                             // Check if we're about to flip the pixel and set.
                             flipped |= self.screen[idx];
-                            self.screen[idx] = true;
+                            self.screen[idx] ^= true;
                         }
                     }
                 }
